@@ -4,22 +4,24 @@ using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private float _speed = 5.0f;
-    [SerializeField] private float _sideMove = 2.25f;
+    [SerializeField] private float _movementSpeed = 5.0f;
+    [SerializeField] private float _sideSpeed = 5f;
     [SerializeField] private float _swipeThreshold = 0.1f;
+    [SerializeField] private float _jumpForce = 3f;
+    private float _sideMove = 2.5f;
+    private Vector3 velocity = Vector3.zero;
+
+    private float _maxLeft = -2.5f;
+    private float _maxRight = 2.5f;
 
     private PlayerInput _playerInput;
-    private Vector2 _touchPosition;
     private Rigidbody _rb;
 
     private InputAction _moveAction;
     private InputAction _jumpAction;
 
-    private float _maxLeft = -2.25f;
-    private float _maxRight = 2.25f;
-
-    bool _canMove;
-    bool _canJump;
+    private bool _canMove;
+    private bool _isGrounded;
 
     private void Awake()
     {
@@ -49,18 +51,36 @@ public class PlayerController : MonoBehaviour
         _jumpAction.performed -= Jump;
     }
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void Start()
     {
         _rb = GetComponent<Rigidbody>();
         _canMove = true;
-        _canJump = true;
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnCollisionExit(Collision other) 
     {
-        transform.Translate(Vector3.forward * _speed * Time.deltaTime);
+        if (other.gameObject.CompareTag("Ground"))
+        {
+            _isGrounded = false;
+        }
+    }
+
+    private void OnCollisionEnter(Collision other) 
+    {
+        if (other.gameObject.CompareTag("Ground"))
+        {
+            _isGrounded = true;
+        }
+        
+        if (other.gameObject.CompareTag("Obstacle"))
+        {
+            Debug.Log("Game Over");
+        }
+    }
+
+    private void Update()
+    {
+        transform.Translate(Vector3.forward * _movementSpeed * Time.deltaTime);
     }
 
     void Move(InputAction.CallbackContext context)
@@ -71,22 +91,9 @@ public class PlayerController : MonoBehaviour
         {
             if (_canMove)
             {
-                if (delta.x > 0)
-                {
-                    transform.position = new Vector3(
-                        Mathf.Clamp(transform.position.x + _sideMove, _maxLeft, _maxRight),
-                        transform.position.y,
-                        transform.position.z);
-                }
-                else
-                {
-                    transform.position = new Vector3(
-                        Mathf.Clamp(transform.position.x - _sideMove, _maxLeft, _maxRight),
-                        transform.position.y,
-                        transform.position.z);
-                }
-
-                StartCoroutine(MovementRestriction());
+                float targetX = transform.position.x + (delta.x > 0 ? _sideMove : -_sideMove); 
+                targetX = Mathf.Clamp(targetX, _maxLeft, _maxRight); 
+                StartCoroutine(MovementRoutine(targetX));
             }
         }
     }
@@ -95,24 +102,20 @@ public class PlayerController : MonoBehaviour
     {
         Debug.Log("Jump");
 
-        if (_canJump)
+        if (_isGrounded)
         {
-            _rb.AddForce(Vector3.up * 5, ForceMode.Impulse);
-            StartCoroutine(JumpRestriction());
+            _rb.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
         }
     }
 
-    IEnumerator MovementRestriction()
+    IEnumerator MovementRoutine(float targetDestination)
     {
         _canMove = false; 
-        yield return new WaitForSeconds(0.5f);
+        while (Mathf.Abs(transform.position.x - targetDestination) > 0.1f)
+        {
+            transform.position = Vector3.SmoothDamp(transform.position, new Vector3(targetDestination, transform.position.y, transform.position.z), ref velocity, _sideSpeed * Time.deltaTime);
+            yield return null;
+        }
         _canMove = true;
-    }
-
-    IEnumerator JumpRestriction()
-    {
-        _canJump = false;
-        yield return new WaitUntil(() => _rb.linearVelocity.y == 0 && Physics.Raycast(transform.position, Vector3.down, 1.1f));
-        _canJump = true;
     }
 }
