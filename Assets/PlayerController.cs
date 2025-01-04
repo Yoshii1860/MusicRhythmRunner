@@ -4,7 +4,7 @@ using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private float _movementSpeed = 5.0f;
+    [SerializeField] private float _movementSpeed = 10.0f;
     [SerializeField] private float _sideSpeed = 5f;
     [SerializeField] private float _swipeThreshold = 0.1f;
     [SerializeField] private float _jumpForce = 3f;
@@ -22,6 +22,13 @@ public class PlayerController : MonoBehaviour
 
     private bool _canMove;
     private bool _isGrounded;
+    private bool _isAudioLoaded = false;
+
+    public void SetAudioLoaded()
+    {
+        Debug.Log("Audio loaded - Movement enabled");
+        _isAudioLoaded = true;
+    }
 
     private void Awake()
     {
@@ -80,7 +87,10 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        transform.Translate(Vector3.forward * _movementSpeed * Time.deltaTime);
+        if (_isAudioLoaded)
+        {
+            transform.Translate(Vector3.forward * _movementSpeed * Time.deltaTime);
+        }
     }
 
     void Move(InputAction.CallbackContext context)

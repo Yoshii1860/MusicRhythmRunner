@@ -273,6 +273,7 @@ MonoBehaviour:
   _movementSpeed: 10
   _sideSpeed: 5
   _swipeThreshold: 0.5
+  _jumpForce: 3
 --- !u!114 &82509610
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -403,10 +404,11 @@ MonoBehaviour:
   _marker: {fileID: 7017278779451649628, guid: f3d2e9eaba8483a498f48239702114d1, type: 3}
   _trail: {fileID: 4519076505063309117, guid: 095b74319d536f84db418316254ee683, type: 3}
   _audioClip: {fileID: 8300000, guid: e78f877cc9366d04791711e889ceebf9, type: 3}
-  _lengthMultiplierInUnits: 10
-  maxObstaclesPerSecond: 2
-  _startDelayInUnits: 30
-  _actionDelayInUnits: 3
+  _strongBeatMaterial: {fileID: 2100000, guid: fcd6d616a87fc3b42bc2dad1d9e266be, type: 2}
+  _startDelayInSeconds: 3
+  _actionDelayInSeconds: 0.3
+  _maxObstaclesPerSecond: 2
+  playerController: {fileID: 82509609}
 --- !u!4 &317918706
 Transform:
   m_ObjectHideFlags: 0
