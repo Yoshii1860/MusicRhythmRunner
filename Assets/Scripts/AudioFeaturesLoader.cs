@@ -13,6 +13,8 @@ public class AudioFeaturesLoader : MonoBehaviour
         public List<float> TempoChanges;
         public List<float> TempoChangeTimes;
         public List<List<float>> SignificantChanges; 
+        public List<SignificantChangeData> SignificantChangeData;
+        public List<SegmentAverages> SegmentAverages;
         public List<List<float>> QuietSegments; // List of lists of floats
         public List<float> SpectralFlux;
         public List<float> BeatStrengths;
@@ -24,12 +26,24 @@ public class AudioFeaturesLoader : MonoBehaviour
     }
 
     [System.Serializable]
-    public struct SignificantChange
+    public struct Change
     {
-        public float Start;
-        public float RMSStart;
-        public float End;
-        public float RMSEnd;
+        public float Start { get; set; }
+        public float End { get; set; }
+        public float StartRMS { get; set; }
+        public float EndRMS { get; set; }
+    }
+
+    [System.Serializable]
+    public struct SignificantChangeData
+    {
+        public Change Change { get; set; }
+        public bool Louder { get; set; }
+        public bool Faster { get; set; }
+        public float PreAvgRMS { get; set; }
+        public float PostAvgRMS { get; set; }
+        public float PreTempo { get; set; }
+        public float PostTempo { get; set; }
     }
 
     [System.Serializable]
@@ -40,7 +54,15 @@ public class AudioFeaturesLoader : MonoBehaviour
         public float AvgRMS;
     }
 
-    public string jsonFilePath = "Assets/AudioAnalyzer/audio_features.json";
+    public struct SegmentAverages
+    {
+        public float SegmentStart;
+        public float SegmentEnd;
+        public float AvgRMS;
+        public float AvgTempo;
+    }
+
+    public string jsonFilePath = "Assets/AudioAnalyzer/audio_features_Intocable.json";
     public AudioFeatures audioFeatures { get; private set; }
 
     public AudioFeatures LoadAudioFeatures()
@@ -53,10 +75,8 @@ public class AudioFeaturesLoader : MonoBehaviour
             if (audioFeatures != null)
             {
                 Debug.Log("Audio features loaded successfully.");
-                Debug.Log($"Tempo: {audioFeatures.Tempo}");
-                Debug.Log($"Significant changes count: {audioFeatures.SignificantChanges.Count}");
 
-                // Process SignificantChanges (example)
+                // Process SignificantChanges
                 for (int i = 0; i < audioFeatures.SignificantChanges.Count; i++)
                 {
                     List<float> changeData = audioFeatures.SignificantChanges[i];
@@ -66,8 +86,6 @@ public class AudioFeaturesLoader : MonoBehaviour
                         float rmsStart = changeData[1];
                         float end = changeData[2];
                         float rmsEnd = changeData[3];
-                        // Use the extracted data as needed
-                        Debug.Log($"Start: {start}, RMSStart: {rmsStart}, End: {end}, RMSEnd: {rmsEnd}");
                     }
                     else
                     {
@@ -76,7 +94,24 @@ public class AudioFeaturesLoader : MonoBehaviour
                     }
                 }
 
-                // Process QuietSegments (example)
+                // Process SignificantChangeData
+                for (int i = 0; i < audioFeatures.SignificantChangeData.Count; i++)
+                {
+                    SignificantChangeData changeData = audioFeatures.SignificantChangeData[i];
+                    // Use the extracted data as needed
+                    Debug.Log($"Significant Change Start: {changeData.Change.Start}, End: {changeData.Change.End}, StartRMS: {changeData.Change.StartRMS}, EndRMS: {changeData.Change.EndRMS}");
+                    Debug.Log($"Louder: {changeData.Louder}, Faster: {changeData.Faster}, PreAvgRMS: {changeData.PreAvgRMS}, PostAvgRMS: {changeData.PostAvgRMS}, PreTempo: {changeData.PreTempo}, PostTempo: {changeData.PostTempo}");
+                }
+
+                // Process SegmentAverages
+                for (int i = 0; i < audioFeatures.SegmentAverages.Count; i++)
+                {
+                    SegmentAverages segmentData = audioFeatures.SegmentAverages[i];
+                    // Use the extracted data as needed
+                    Debug.Log($"Segment Start: {segmentData.SegmentStart}, End: {segmentData.SegmentEnd}, AvgRMS: {segmentData.AvgRMS}, AvgTempo: {segmentData.AvgTempo}");
+                }
+
+                // Process QuietSegments
                 for (int i = 0; i < audioFeatures.QuietSegments.Count; i++)
                 {
                     List<float> quietSegmentData = audioFeatures.QuietSegments[i];
@@ -85,8 +120,6 @@ public class AudioFeaturesLoader : MonoBehaviour
                         float start = quietSegmentData[0];
                         float end = quietSegmentData[1];
                         float avgRMS = quietSegmentData[2];
-                        // Use the extracted data as needed
-                        Debug.Log($"Quiet Segment Start: {start}, End: {end}, AvgRMS: {avgRMS}");
                     }
                     else
                     {
