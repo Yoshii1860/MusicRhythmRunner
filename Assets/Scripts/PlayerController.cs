@@ -20,6 +20,7 @@ public class PlayerController : MonoBehaviour
     private InputAction _moveAction;
     private InputAction _jumpAction;
 
+    public bool IsRunning = true;
     private bool _canMove;
     private bool _isGrounded;
     private bool _isAudioLoaded = false;
@@ -87,7 +88,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (_isAudioLoaded)
+        if (_isAudioLoaded && IsRunning)
         {
             transform.Translate(Vector3.forward * _movementSpeed * Time.deltaTime);
         }

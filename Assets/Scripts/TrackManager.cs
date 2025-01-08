@@ -18,60 +18,83 @@ public class TrackManager : MonoBehaviour
     }
 
     [System.Serializable]
-    public struct ObstacleData
+    public struct CoinData
     {
         public int amount;
         public float ZPosition;
-        public float XPosition;
-        public float XPosition2;
+        public float AvailableXPosition;
         public bool isJump;
     }
 
     private const float UNITS_PER_SECOND = 10f;
 
+    [Header("Game Settings")]
     [SerializeField] private float difficulty = 1;
+    [SerializeField] private AudioClip _audioClip;
+    [SerializeField] private float _startDelayInSeconds = 3f; 
+    [SerializeField] private float _endDelayInSeconds = 4f;
+    [SerializeField] private float _actionDelayInSeconds = 0.3f; 
+    [SerializeField] private float _maxObstaclesPerSecond = 2.5f;
 
+    [Header("Prefabs")]
+    [SerializeField] private GameObject _trail;
     [SerializeField] private GameObject[] _obstacles;
-    [SerializeField] private float[] _obstaclePositions;
     [SerializeField] private GameObject _coin;
     [SerializeField] private GameObject _quietSegment;
     [SerializeField] private GameObject _marker;
-    [SerializeField] private GameObject _trail;
     [SerializeField] private GameObject _changeObstacle;
-    [SerializeField] private AudioClip _audioClip;
-    [SerializeField] private Material _strongBeatMaterial;
-    [SerializeField] private float _startDelayInSeconds = 3f; 
-    [SerializeField] private float _actionDelayInSeconds = 0.3f; 
-    [SerializeField] private float _maxObstaclesPerSecond = 2.5f;
-    private float _obstaclesPerSecond;
+    [SerializeField] private GameObject _treasure;
+    [SerializeField] private GameObject _finishTrigger;
+    [Space(10)]
 
+    [Header("Parent Objects")]
     [SerializeField] private GameObject _obstacleParent;
     [SerializeField] private GameObject _markerParent;
     [SerializeField] private GameObject _quietSegmentParent;
     [SerializeField] private GameObject _changeObstacleParent;
     [SerializeField] private GameObject _coinParent;
 
+    [Header("Other Settings")]
+    [SerializeField] private float[] _obstaclePositions;
+    [SerializeField] private Material _strongBeatMaterial;
     public AudioFeaturesLoader AudioFeaturesLoader;
-    private AudioFeaturesLoader.AudioFeatures _loadedFeatures;
+    [SerializeField] private GameObject _player;
 
+    private float _obstaclesPerSecond;
+    private AudioFeaturesLoader.AudioFeatures _loadedFeatures;
     private AudioSource audioSource;
     private float clipLength;
-    [SerializeField] PlayerController playerController;
-
+    private PlayerController _playerController;
+    private Animator _playerAnimator;
     private List<ChangeData> _changeData = new List<ChangeData>();
     private List<float> _segmentChangeTimes = new List<float>();
-
-    private List<ObstacleData> _obstacleData = new List<ObstacleData>();
-
+    private List<CoinData> _coinData = new List<CoinData>();
     bool inQuietSegment = false;
+
+    [SerializeField] private Material groundMaterial; // Assign your material here
+    [SerializeField] private string textureProperty = "_MainTex"; // Default texture property for the texture
+
+    void SetTextureScale(float textureSize)
+    {
+        if (groundMaterial != null && groundMaterial.HasProperty(textureProperty))
+        {
+            // Calculate tiling based on the size of the ground and texture size
+            Vector2 tiling = new Vector2(1, textureSize);
+
+            // Apply the tiling to the material
+            groundMaterial.SetTextureScale(textureProperty, tiling);
+        }
+    }
 
     void Awake()
     {
         // Load audio features
         AudioFeaturesLoader AudioFeaturesLoader = FindAnyObjectByType<AudioFeaturesLoader>();
         
-        clipLength = _audioClip.length * UNITS_PER_SECOND + (_startDelayInSeconds * UNITS_PER_SECOND);
+        clipLength = _audioClip.length * UNITS_PER_SECOND + (_startDelayInSeconds * UNITS_PER_SECOND) + (_endDelayInSeconds * UNITS_PER_SECOND);
         audioSource = GetComponent<AudioSource>();
+        _playerController = _player.GetComponent<PlayerController>();
+        _playerAnimator = _player.GetComponentInChildren<Animator>();
     }
 
     public void SetUpWorld(AudioFeaturesLoader.AudioFeatures audioFeatures)
@@ -100,9 +123,6 @@ public class TrackManager : MonoBehaviour
     IEnumerator AdjustObstacleSpawnRate()
     {
         _segmentChangeTimes = _loadedFeatures.SegmentAverages.Select(segment => segment.SegmentEnd).ToList();
-        Debug.Log("Segment change times: " + string.Join(", ", _segmentChangeTimes));
-        Debug.Log("Segment change time count: " + _segmentChangeTimes.Count);
-        Debug.Log("Count of segment averages: " + _loadedFeatures.SegmentAverages.Count);
 
         if (_loadedFeatures.Tempo > 0)
         {
@@ -118,6 +138,8 @@ public class TrackManager : MonoBehaviour
         newTrail.transform.position = new Vector3(newTrail.transform.position.x, newTrail.transform.position.y, newTrail.transform.position.z * clipLength);
         newTrail.transform.localScale = new Vector3(1, 1, newTrail.transform.localScale.z * clipLength);
 
+        SetTextureScale(clipLength/10f);
+
         yield return null;
     }
 
@@ -125,7 +147,8 @@ public class TrackManager : MonoBehaviour
     {
         Debug.Log("Start coroutine to play audio with delay");
         audioSource.clip = _audioClip;
-        playerController.SetAudioLoaded();
+        _playerController.SetAudioLoaded();
+        _playerAnimator.SetTrigger("Start");
         yield return new WaitForSeconds(_startDelayInSeconds);
         audioSource.Play();
         Debug.Log("Audio started playing");
@@ -146,60 +169,39 @@ public class TrackManager : MonoBehaviour
 
     IEnumerator PlaceCoins()
     {
-        float lastCoinZPosition = _startDelayInSeconds * UNITS_PER_SECOND; // Start placing coins after the delay
-        float lastCoinXPosition = 0;
-        bool isSameObstacle = false;
-        float lastObstaclePosition = 0;
-        
-        while (lastCoinZPosition < clipLength)
+        float lastCoinZPosition = _startDelayInSeconds * UNITS_PER_SECOND; // Start placing coins after the _endDelayInSeconds
+        float clipLengthWithoutEndDelay = clipLength - (_endDelayInSeconds * UNITS_PER_SECOND); // Don't place coins after the _endDelayInSeconds
+        GameObject lastCoin = null;
+
+        while (lastCoinZPosition < clipLengthWithoutEndDelay)
         {
             // Check if there's an obstacle already at the current position
-            float CoinXPosition = 0;
+            float newCoinXPosition = 0;
             float CoinYPosition = 0.5f;
             
-            foreach (var obstacle in _obstacleData)
+            foreach (var coin in _coinData)
             {
                 // Calculate the position of the obstacle based on the beat time
-                float obstaclePosition = obstacle.ZPosition;
+                float obstaclePosition = coin.ZPosition;
 
                 if (Mathf.Abs(obstaclePosition - lastCoinZPosition) < 3f) // Small threshold to avoid overlap
                 {
-                    if (obstacle.isJump)
+                    if (coin.isJump)
                     {
                         CoinYPosition = 1.5f;
                     }
-                    else if (obstacle.amount == 1)
+                    else if (coin.amount == 1)
                     {
-                        // get random position from _obstaclePositions except for the one where the obstacle is
-                        if (lastObstaclePosition != obstacle.XPosition)
-                        {
-                            CoinXPosition = _obstaclePositions.Where(x => x != obstacle.XPosition).ToArray()[Random.Range(0, _obstaclePositions.Length - 1)];
-                            lastCoinXPosition = CoinXPosition;
-                            lastObstaclePosition = obstacle.XPosition;
-                        }
-                        else
-                        {
-                            CoinXPosition = lastCoinXPosition;
-                        }
+                        newCoinXPosition = coin.AvailableXPosition;
                     }
-                    else if (obstacle.amount == 2)
+                    else if (coin.amount == 2)
                     {
-                        // get random position from _obstaclePositions except for the two where the obstacles are
-                        if (lastObstaclePosition != obstacle.XPosition)
-                        {
-                            CoinXPosition = _obstaclePositions.Where(x => x != obstacle.XPosition && x != obstacle.XPosition2).ToArray()[Random.Range(0, _obstaclePositions.Length - 2)];
-                            lastCoinXPosition = CoinXPosition;
-                            lastObstaclePosition = obstacle.XPosition;
-                        }
-                        else
-                        {
-                            CoinXPosition = lastCoinXPosition;
-                        }
+                        newCoinXPosition = coin.AvailableXPosition;
                     }
                 }
             }
 
-            SpawnCoin(lastCoinZPosition, CoinXPosition, CoinYPosition);
+            lastCoin = SpawnCoin(lastCoinZPosition, newCoinXPosition, CoinYPosition);
 
             // Increment the coin position by 1 unit
             lastCoinZPosition += 2f; 
@@ -207,15 +209,17 @@ public class TrackManager : MonoBehaviour
             yield return null;
         }
 
+        Instantiate(_finishTrigger, new Vector3(0, 0.1f, lastCoinZPosition), Quaternion.identity);
+        Instantiate(_treasure, new Vector3(0, 0.1f, lastCoinZPosition + UNITS_PER_SECOND), Quaternion.identity);
+
         Debug.Log("Placed coins on the track");
         yield return null;
     }
 
-    void SpawnCoin(float ZPosition, float XPosition = 0, float YPosition = 0.5f)
+    GameObject SpawnCoin(float ZPosition, float XPosition = 0, float YPosition = 0.5f)
     {
         // Place a coin at the given position
-        GameObject coin = Instantiate(_coin, new Vector3(XPosition, YPosition, ZPosition), Quaternion.identity, _coinParent.transform);
-        coin.transform.localRotation = Quaternion.Euler(90, 0, 0);
+        return Instantiate(_coin, new Vector3(XPosition, YPosition, ZPosition), Quaternion.identity, _coinParent.transform);
     }
 
     IEnumerator PlaceObstacles()
@@ -291,15 +295,14 @@ public class TrackManager : MonoBehaviour
     {
         GameObject jumpObstacle = Instantiate(_obstacles[0], new Vector3(0, _obstacles[obstacleIndex].transform.position.y, obstaclePosition), Quaternion.identity, _obstacleParent.transform);
 
-        ObstacleData obstacleData = new ObstacleData
+        CoinData coinData = new CoinData
         {
             amount = 1,
             ZPosition = obstaclePosition,
-            XPosition = 0,
-            XPosition2 = 0,
+            AvailableXPosition = 0,
             isJump = true
         };
-        _obstacleData.Add(obstacleData);
+        _coinData.Add(coinData);
 
         return jumpObstacle;
     }
@@ -316,18 +319,17 @@ public class TrackManager : MonoBehaviour
         {
             // Instantiate a single obstacle
             GameObject obstacle = Instantiate(_obstacles[obstacleIndex], 
-                                            new Vector3(_obstaclePositions[randomPositionIndex], _obstacles[obstacleIndex].transform.position.y, obstaclePosition), 
+                                            new Vector3(_obstaclePositions[randomPositionIndex], _obstacles[obstacleIndex].transform.position.y / 2, obstaclePosition), 
                                             Quaternion.identity, _obstacleParent.transform);
 
-            ObstacleData obstacleData = new ObstacleData
+            CoinData coinData = new CoinData
             {
                 amount = 1,
-                ZPosition = obstaclePosition,
-                XPosition = _obstaclePositions[randomPositionIndex],
-                XPosition2 = 0,
+                ZPosition = obstacle.transform.position.z,
+                AvailableXPosition = _obstaclePositions.Where(x => x != obstacle.transform.position.x).First(),
                 isJump = false
             };
-            _obstacleData.Add(obstacleData);
+            _coinData.Add(coinData);
 
             return new GameObject[] { obstacle };
         }
@@ -347,21 +349,20 @@ public class TrackManager : MonoBehaviour
         {
             // Instantiate the obstacle
             GameObject obstacle = Instantiate(_obstacles[obstacleIndex], 
-                                            new Vector3(_obstaclePositions[randomPositions[i]], _obstacles[obstacleIndex].transform.position.y, obstaclePosition), 
+                                            new Vector3(_obstaclePositions[randomPositions[i]], _obstacles[obstacleIndex].transform.position.y / 2, obstaclePosition), 
                                             Quaternion.identity, _obstacleParent.transform);
             obstacles[i] = obstacle;
         }
 
-        ObstacleData obstacleData2 = new ObstacleData
+        CoinData coinData2 = new CoinData
         {
             amount = 2,
-            ZPosition = obstaclePosition,
-            XPosition = _obstaclePositions[randomPositionIndex],
-            XPosition2 = _obstaclePositions[secondRandomPositionIndex],
+            ZPosition = obstacles[0].transform.position.z,
+            AvailableXPosition = _obstaclePositions.Where(x => x != obstacles[0].transform.position.x && x != obstacles[1].transform.position.x).First(),
             isJump = false
         };
 
-        _obstacleData.Add(obstacleData2);
+        _coinData.Add(coinData2);
 
         return obstacles;
     }
