@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 8557794327085405424}
   - component: {fileID: 1920909069997313941}
   - component: {fileID: 5048044527671766309}
+  - component: {fileID: 1707435511320867859}
+  - component: {fileID: 2719227194419491054}
   m_Layer: 0
   m_Name: QuietSegmentPrefab
   m_TagString: Ground
@@ -86,3 +88,40 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1707435511320867859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 922985610137833918}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 145531cac3cc05c4293eba14f4144318, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  effectPrefabs:
+  - {fileID: 3283536373584929611, guid: 7ecac52f1d4aaa54ebfae1697ec802ac, type: 3}
+  IsSpecificTime: 1
+  specificTime: 1
+--- !u!65 &2719227194419491054
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 922985610137833918}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 10, y: 1, z: 10}
+  m_Center: {x: 0, y: 0, z: 0}

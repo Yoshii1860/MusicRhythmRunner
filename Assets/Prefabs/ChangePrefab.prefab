@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7838156769949284624}
   - component: {fileID: 7557439939480875059}
   - component: {fileID: 2689980966499723308}
+  - component: {fileID: 5152875164760970181}
   m_Layer: 0
   m_Name: ChangePrefab
   m_TagString: Obstacle
@@ -27,7 +28,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8888013446556566665}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 2, z: 0}
   m_LocalScale: {x: 10, y: 10, z: 1}
   m_ConstrainProportionsScale: 0
@@ -108,3 +109,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5152875164760970181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8888013446556566665}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 145531cac3cc05c4293eba14f4144318, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  effectPrefabs:
+  - {fileID: 165734, guid: 6c1e328deef14cf41982d5f9232e04ff, type: 3}
+  - {fileID: 158530, guid: eff797b50bb18e64c8057ef583cec496, type: 3}
+  - {fileID: 108474, guid: 953ca70406ee83c468a2f42fd56bdbe7, type: 3}
+  - {fileID: 158008, guid: 4d7cade01d366e7458905879e0874956, type: 3}
+  - {fileID: 107166, guid: 847bc0ce7577e6a4992fb57041d6294b, type: 3}
+  IsSpecificTime: 1
+  specificTime: 3

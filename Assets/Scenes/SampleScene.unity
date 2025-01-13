@@ -149,7 +149,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95a532f0bbcfba447836029cdad53eab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  difficulty: 2
+  difficulty: 1.5
   _audioClip: {fileID: 8300000, guid: e78f877cc9366d04791711e889ceebf9, type: 3}
   _startDelayInSeconds: 3
   _endDelayInSeconds: 3
@@ -157,8 +157,9 @@ MonoBehaviour:
   _maxObstaclesPerSecond: 3
   _trail: {fileID: 4519076505063309117, guid: 095b74319d536f84db418316254ee683, type: 3}
   _obstacles:
-  - {fileID: 8812433980000680673, guid: 0859bbbbc3336be4fb6165865232f2f7, type: 3}
-  - {fileID: 4103546128975101172, guid: 64dd4356c76e785479c82f0ecd13768f, type: 3}
+  - {fileID: 5274281708165031014, guid: e9e32e1a827f4cf428f11dd35795a89f, type: 3}
+  - {fileID: 7213281811969279771, guid: 3b976852558a6fa40a30f1d96985f574, type: 3}
+  _jumpObstacle: {fileID: 5303668387572530420, guid: 8f6d0435fc62e1147966db7bd14a864a, type: 3}
   _coin: {fileID: 4590650227889734749, guid: 87e6f19e0db89fa49b3f70f1dae552a5, type: 3}
   _quietSegment: {fileID: 922985610137833918, guid: 1d889935b20ba2446866b89951b0ec8f, type: 3}
   _marker: {fileID: 7017278779451649628, guid: f3d2e9eaba8483a498f48239702114d1, type: 3}
@@ -171,8 +172,8 @@ MonoBehaviour:
   _changeObstacleParent: {fileID: 2083124619}
   _coinParent: {fileID: 1252183326}
   _obstaclePositions:
-  - 0
   - -3
+  - 0
   - 3
   _strongBeatMaterial: {fileID: 2100000, guid: fcd6d616a87fc3b42bc2dad1d9e266be, type: 2}
   AudioFeaturesLoader: {fileID: 976771404}
@@ -715,7 +716,7 @@ Transform:
   m_GameObject: {fileID: 1252183326}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 50.505135, y: 113.292336, z: 420.59872}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1016,7 +1017,7 @@ Transform:
   m_GameObject: {fileID: 1866537876}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30.749104, y: 14.311581, z: 2518.0247}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1047,7 +1048,7 @@ Transform:
   m_GameObject: {fileID: 2083124619}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30.749104, y: 14.311581, z: 2518.0247}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1302,6 +1303,8 @@ MonoBehaviour:
   coinText: {fileID: 812999023}
   timeStampText: {fileID: 1320990564}
   playerController: {fileID: 915031725}
+  _lostClip: {fileID: 8300000, guid: 22f96e9a68f0a2d4692d9893be80e45c, type: 3}
+  HasLost: 0
 --- !u!4 &2114394448
 Transform:
   m_ObjectHideFlags: 0
@@ -1342,7 +1345,7 @@ Transform:
   m_GameObject: {fileID: 2117240990}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30.749104, y: 14.311581, z: 2518.0247}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1356,6 +1359,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 233617574271588608, guid: 57232ec0fc5a1964db37991073c953c1, type: 3}
+      propertyPath: m_Constraints
+      value: 112
+      objectReference: {fileID: 0}
     - target: {fileID: 1539825690803187797, guid: 57232ec0fc5a1964db37991073c953c1, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1400,6 +1407,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 7847820519806637787, guid: 57232ec0fc5a1964db37991073c953c1, type: 3}
+      propertyPath: _deathEffect
+      value: 
+      objectReference: {fileID: 4532927719304250995, guid: d3e414103a9c5674790b77afb67a7540, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -17,28 +17,23 @@ public class TrackManager : MonoBehaviour
         public float TempoChange;
     }
 
-    [System.Serializable]
-    public struct CoinData
-    {
-        public int amount;
-        public float ZPosition;
-        public float AvailableXPosition;
-        public bool isJump;
-    }
-
-    private const float UNITS_PER_SECOND = 10f;
-
     [Header("Game Settings")]
     [SerializeField] private float difficulty = 1;
     [SerializeField] private AudioClip _audioClip;
+    private float clipLength;
     [SerializeField] private float _startDelayInSeconds = 3f; 
     [SerializeField] private float _endDelayInSeconds = 4f;
     [SerializeField] private float _actionDelayInSeconds = 0.3f; 
     [SerializeField] private float _maxObstaclesPerSecond = 2.5f;
+    private float _obstaclesPerSecond;
+    private const float UNITS_PER_SECOND = 10f;
+    private const int COIN_DISTANCE = 2;
+    private const int COLUMN_LENGTH = 3;
 
     [Header("Prefabs")]
     [SerializeField] private GameObject _trail;
     [SerializeField] private GameObject[] _obstacles;
+    [SerializeField] private GameObject _jumpObstacle;
     [SerializeField] private GameObject _coin;
     [SerializeField] private GameObject _quietSegment;
     [SerializeField] private GameObject _marker;
@@ -59,32 +54,20 @@ public class TrackManager : MonoBehaviour
     [SerializeField] private Material _strongBeatMaterial;
     public AudioFeaturesLoader AudioFeaturesLoader;
     [SerializeField] private GameObject _player;
+    [SerializeField] private Material groundMaterial;
+    [SerializeField] private string textureProperty = "_MainTex";
 
-    private float _obstaclesPerSecond;
+    [Header("References")]
     private AudioFeaturesLoader.AudioFeatures _loadedFeatures;
     private AudioSource audioSource;
-    private float clipLength;
     private PlayerController _playerController;
     private Animator _playerAnimator;
+    private MapGridManager _map;
+
+    [Header("Data")]
     private List<ChangeData> _changeData = new List<ChangeData>();
     private List<float> _segmentChangeTimes = new List<float>();
-    private List<CoinData> _coinData = new List<CoinData>();
     bool inQuietSegment = false;
-
-    [SerializeField] private Material groundMaterial; // Assign your material here
-    [SerializeField] private string textureProperty = "_MainTex"; // Default texture property for the texture
-
-    void SetTextureScale(float textureSize)
-    {
-        if (groundMaterial != null && groundMaterial.HasProperty(textureProperty))
-        {
-            // Calculate tiling based on the size of the ground and texture size
-            Vector2 tiling = new Vector2(1, textureSize);
-
-            // Apply the tiling to the material
-            groundMaterial.SetTextureScale(textureProperty, tiling);
-        }
-    }
 
     void Awake()
     {
@@ -95,7 +78,12 @@ public class TrackManager : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         _playerController = _player.GetComponent<PlayerController>();
         _playerAnimator = _player.GetComponentInChildren<Animator>();
+
+        _map = GetComponent<MapGridManager>();
+        _map.InitializeGrid((int)clipLength, COLUMN_LENGTH);
     }
+
+#region Initialization
 
     public void SetUpWorld(AudioFeaturesLoader.AudioFeatures audioFeatures)
     {
@@ -143,6 +131,18 @@ public class TrackManager : MonoBehaviour
         yield return null;
     }
 
+    void SetTextureScale(float textureSize)
+    {
+        if (groundMaterial != null && groundMaterial.HasProperty(textureProperty))
+        {
+            // Calculate tiling based on the size of the ground and texture size
+            Vector2 tiling = new Vector2(1, textureSize);
+
+            // Apply the tiling to the material
+            groundMaterial.SetTextureScale(textureProperty, tiling);
+        }
+    }
+
     IEnumerator PlayAudioWithDelay()
     {
         Debug.Log("Start coroutine to play audio with delay");
@@ -153,6 +153,10 @@ public class TrackManager : MonoBehaviour
         audioSource.Play();
         Debug.Log("Audio started playing");
     }
+
+#endregion
+
+#region Difficulty Adjustments
 
     void ChangeDifficultyOnChange(bool isFirstSegment = false)
     {
@@ -167,60 +171,9 @@ public class TrackManager : MonoBehaviour
         }
     }
 
-    IEnumerator PlaceCoins()
-    {
-        float lastCoinZPosition = _startDelayInSeconds * UNITS_PER_SECOND; // Start placing coins after the _endDelayInSeconds
-        float clipLengthWithoutEndDelay = clipLength - (_endDelayInSeconds * UNITS_PER_SECOND); // Don't place coins after the _endDelayInSeconds
-        GameObject lastCoin = null;
+#endregion
 
-        while (lastCoinZPosition < clipLengthWithoutEndDelay)
-        {
-            // Check if there's an obstacle already at the current position
-            float newCoinXPosition = 0;
-            float CoinYPosition = 0.5f;
-            
-            foreach (var coin in _coinData)
-            {
-                // Calculate the position of the obstacle based on the beat time
-                float obstaclePosition = coin.ZPosition;
-
-                if (Mathf.Abs(obstaclePosition - lastCoinZPosition) < 3f) // Small threshold to avoid overlap
-                {
-                    if (coin.isJump)
-                    {
-                        CoinYPosition = 1.5f;
-                    }
-                    else if (coin.amount == 1)
-                    {
-                        newCoinXPosition = coin.AvailableXPosition;
-                    }
-                    else if (coin.amount == 2)
-                    {
-                        newCoinXPosition = coin.AvailableXPosition;
-                    }
-                }
-            }
-
-            lastCoin = SpawnCoin(lastCoinZPosition, newCoinXPosition, CoinYPosition);
-
-            // Increment the coin position by 1 unit
-            lastCoinZPosition += 2f; 
-
-            yield return null;
-        }
-
-        Instantiate(_finishTrigger, new Vector3(0, 0.1f, lastCoinZPosition), Quaternion.identity);
-        Instantiate(_treasure, new Vector3(0, 0.1f, lastCoinZPosition + UNITS_PER_SECOND), Quaternion.identity);
-
-        Debug.Log("Placed coins on the track");
-        yield return null;
-    }
-
-    GameObject SpawnCoin(float ZPosition, float XPosition = 0, float YPosition = 0.5f)
-    {
-        // Place a coin at the given position
-        return Instantiate(_coin, new Vector3(XPosition, YPosition, ZPosition), Quaternion.identity, _coinParent.transform);
-    }
+#region Obstacle Spawning
 
     IEnumerator PlaceObstacles()
     {
@@ -283,31 +236,25 @@ public class TrackManager : MonoBehaviour
         {
             //isStrongBeat = true;
             markerObject.GetComponent<Renderer>().material = _strongBeatMaterial;
-            SpawnJumpObstacle(0, obstaclePosition);
+            SpawnJumpObstacle(obstaclePosition);
         }
         else
         {
-            SpawnMoveObstacle(1, obstaclePosition);
+            SpawnMoveObstacle(obstaclePosition);
         }
     }
 
-    GameObject SpawnJumpObstacle(int obstacleIndex, float obstaclePosition)
+    GameObject SpawnJumpObstacle(float obstaclePosition)
     {
-        GameObject jumpObstacle = Instantiate(_obstacles[0], new Vector3(0, _obstacles[obstacleIndex].transform.position.y, obstaclePosition), Quaternion.identity, _obstacleParent.transform);
+        GameObject jumpObstacle = Instantiate(_jumpObstacle, new Vector3(0, _jumpObstacle.transform.position.y, obstaclePosition), Quaternion.identity, _obstacleParent.transform);
 
-        CoinData coinData = new CoinData
-        {
-            amount = 1,
-            ZPosition = obstaclePosition,
-            AvailableXPosition = 0,
-            isJump = true
-        };
-        _coinData.Add(coinData);
+        int obstaclePositionInt = Mathf.RoundToInt(obstaclePosition);
+        _map.AddJumpObstacle(obstaclePositionInt);
 
         return jumpObstacle;
     }
 
-    GameObject[] SpawnMoveObstacle(int obstacleIndex, float obstaclePosition)
+    GameObject[] SpawnMoveObstacle(float obstaclePosition)
     {
         // Determine the number of obstacles to spawn (1 or 2)
         int randomAmountIndex = Random.Range(1, 3);
@@ -315,21 +262,19 @@ public class TrackManager : MonoBehaviour
         // Choose a random position for the obstacle
         int randomPositionIndex = Random.Range(0, _obstaclePositions.Length);
 
+        // Choose a random obstacle from the list
+        int randomObstacleIndex = Random.Range(0, _obstacles.Length);
+
         if (randomAmountIndex == 1)
         {
             // Instantiate a single obstacle
-            GameObject obstacle = Instantiate(_obstacles[obstacleIndex], 
-                                            new Vector3(_obstaclePositions[randomPositionIndex], _obstacles[obstacleIndex].transform.position.y / 2, obstaclePosition), 
+            GameObject obstacle = Instantiate(_obstacles[randomObstacleIndex], 
+                                            new Vector3(_obstaclePositions[randomPositionIndex], _obstacles[randomObstacleIndex].transform.position.y / 2, obstaclePosition), 
                                             Quaternion.identity, _obstacleParent.transform);
 
-            CoinData coinData = new CoinData
-            {
-                amount = 1,
-                ZPosition = obstacle.transform.position.z,
-                AvailableXPosition = _obstaclePositions.Where(x => x != obstacle.transform.position.x).First(),
-                isJump = false
-            };
-            _coinData.Add(coinData);
+
+            int obstaclePositionInt = Mathf.RoundToInt(obstaclePosition);
+            _map.AddObstacle(obstaclePositionInt, randomPositionIndex);
 
             return new GameObject[] { obstacle };
         }
@@ -347,22 +292,17 @@ public class TrackManager : MonoBehaviour
 
         for (int i = 0; i < randomAmountIndex; i++)
         {
+            randomObstacleIndex = Random.Range(0, _obstacles.Length);
+
             // Instantiate the obstacle
-            GameObject obstacle = Instantiate(_obstacles[obstacleIndex], 
-                                            new Vector3(_obstaclePositions[randomPositions[i]], _obstacles[obstacleIndex].transform.position.y / 2, obstaclePosition), 
+            GameObject obstacle = Instantiate(_obstacles[randomObstacleIndex], 
+                                            new Vector3(_obstaclePositions[randomPositions[i]], _obstacles[randomObstacleIndex].transform.position.y / 2, obstaclePosition), 
                                             Quaternion.identity, _obstacleParent.transform);
             obstacles[i] = obstacle;
+
+            int obstaclePositionInt = Mathf.RoundToInt(obstaclePosition);
+            _map.AddObstacle(obstaclePositionInt, randomPositions[i]);
         }
-
-        CoinData coinData2 = new CoinData
-        {
-            amount = 2,
-            ZPosition = obstacles[0].transform.position.z,
-            AvailableXPosition = _obstaclePositions.Where(x => x != obstacles[0].transform.position.x && x != obstacles[1].transform.position.x).First(),
-            isJump = false
-        };
-
-        _coinData.Add(coinData2);
 
         return obstacles;
     }
@@ -409,6 +349,8 @@ public class TrackManager : MonoBehaviour
                                                     + ((newQuietSegment.transform.localScale.z / 2f) * UNITS_PER_SECOND);
                     newQuietSegment.transform.position = new Vector3(newQuietSegment.transform.position.x, newQuietSegment.transform.position.y, quietSegmentStartPosition);
 
+                    newQuietSegment.GetComponent<EffectSpawner>().specificTime = quietSegmentLength;
+
                     inQuietSegment = true;
                     return newQuietSegment;
                 }
@@ -421,4 +363,155 @@ public class TrackManager : MonoBehaviour
         inQuietSegment = false;
         return null;
     }
+
+#region Coin Spawning
+
+    IEnumerator PlaceCoins()
+    {
+        int currentLane = 1;
+        int targetLane = currentLane;
+        float rawClipLength = _audioClip.length * UNITS_PER_SECOND;
+        int coinDelay = 0;
+        float startDelay = _startDelayInSeconds * UNITS_PER_SECOND;
+        
+        float lastXCoinPosition = 0;
+        int coinCount = 0;
+
+        for (int i = 0; i < rawClipLength; i++)
+        {
+            // Don´t place coins before the start delay
+            if (i < startDelay)
+            {
+                continue;
+            }
+            // Don´t place coins for the end delay and prevent map index out of range
+            else if (i >= rawClipLength - COIN_DISTANCE)
+            {
+                break;
+            }
+
+            // Don´t place coins too close to each other
+            if (coinDelay < COIN_DISTANCE)
+            {
+                coinDelay++;
+                continue;
+            }
+            coinDelay = 0;
+
+            // If 10 coins are placed in a row, change the lane without taking the current position into account
+            if (coinCount >= 10 && !_map.GetMapData(i + COIN_DISTANCE, currentLane).IsJump)
+            {
+                coinCount = 0;
+                if (currentLane == 0 || currentLane == 2)
+                {
+                    targetLane = 1;
+                }
+                else if (currentLane == 1)
+                {
+                    int randomLane = Random.Range(0, 2);
+                    targetLane = randomLane == 0 ? 0 : 2;
+                }
+            }
+
+            // Change target lane if there is an obstacle in the current lane
+            if (_map.GetMapData(i + COIN_DISTANCE, currentLane).IsOccupied)
+            {
+                for (int lane = 0; lane < 3; lane++)
+                {
+                    if (!_map.GetMapData(i + COIN_DISTANCE, lane).IsOccupied)
+                    {
+                        targetLane = lane;
+                        break;
+                    }
+                }
+            }
+            // Change target lane if there is an obstacle close to the current lane
+            else
+            {
+                if (_map.GetMapData(i + COIN_DISTANCE, currentLane).IsCloseToObstacle)
+                {
+                    for (int lane = 0; lane < 3; lane++)
+                    {
+                        if (!_map.GetMapData(i + COIN_DISTANCE, lane).IsCloseToObstacle)
+                        {
+                            targetLane = lane;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Check if the current lane is different from the target lane
+            if (currentLane != targetLane)
+            {
+                // Check if the target lane is two lanes away from the current lane
+                if (Mathf.Abs(currentLane - targetLane) == 2)
+                {
+                    currentLane = currentLane < targetLane ? currentLane + 1 : currentLane - 1;
+                }
+                else
+                {
+                    currentLane = targetLane;
+                }
+            }
+
+            // Check if the current lane is blocked by an obstacle and change the lane to unoccupied lane
+            if (_map.GetMapData(i + COIN_DISTANCE, currentLane).IsOccupied && !_map.GetMapData(i + COIN_DISTANCE, currentLane).IsJump)
+            {
+                for (int lane = 0; lane < 3; lane++)
+                {
+                    if (!_map.GetMapData(i + COIN_DISTANCE, lane).IsOccupied)
+                    {
+                        Debug.Log("Coin is on: " + (i + COIN_DISTANCE));
+                        Debug.Log("Coin placed on: " + currentLane);
+                        currentLane = lane;
+                        Debug.Log("Coin is now on: " + currentLane);
+                        Debug.Log("Coin placed on obstacle and now changed lane");
+                        break;
+                    }
+                }
+            }
+
+            float xPosition = _obstaclePositions[currentLane];
+
+            // Change x position if the coin is too close to the end
+            if (i + COIN_DISTANCE >= rawClipLength - 10)
+            {
+                xPosition = _obstaclePositions[1];
+            }
+
+            // Check if the last coin was placed at the same x position
+            if (lastXCoinPosition == xPosition)
+            {
+                coinCount++;
+            }
+            else
+            {
+                coinCount = 0;
+                lastXCoinPosition = xPosition;
+            }
+
+            if (_map.GetMapData(i + COIN_DISTANCE, currentLane).IsOccupied && !_map.GetMapData(i + COIN_DISTANCE, currentLane).IsJump)
+            {
+                Debug.LogError("Coin placed on occupied position at: " + (i + COIN_DISTANCE) + " and lane: " + currentLane);
+            }
+
+            SpawnCoin(i, xPosition, _map.GetMapData(i + COIN_DISTANCE, currentLane).IsJump ? 1.5f : 0.5f);
+        }
+
+        // Place Treasure at the end of the track
+        Instantiate(_treasure, new Vector3(0, 0.5f, rawClipLength + COIN_DISTANCE), Quaternion.identity, _coinParent.transform);
+
+        yield return null;
+    }
+
+    GameObject SpawnCoin(float ZPosition, float XPosition = 0, float YPosition = 0.5f)
+    {
+        // Place a coin at the given position
+        return Instantiate(_coin, new Vector3(XPosition, YPosition, ZPosition), Quaternion.identity, _coinParent.transform);
+    }
+
+#endregion
+
+# endregion
 }

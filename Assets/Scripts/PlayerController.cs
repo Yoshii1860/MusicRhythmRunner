@@ -8,6 +8,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _sideSpeed = 5f;
     [SerializeField] private float _swipeThreshold = 0.1f;
     [SerializeField] private float _jumpForce = 3f;
+    [SerializeField] private GameObject _deathEffect;
     private float _sideMove = 2.5f;
     private Vector3 velocity = Vector3.zero;
 
@@ -82,7 +83,11 @@ public class PlayerController : MonoBehaviour
         
         if (other.gameObject.CompareTag("Obstacle"))
         {
-            Debug.Log("Game Over");
+            _canMove = false;
+            IsRunning = false;
+            Instantiate(_deathEffect, transform.position, Quaternion.identity);
+            GetComponentInChildren<Animator>().SetTrigger("Stop");
+            GameManager.Instance.EndGame(false);
         }
     }
 
